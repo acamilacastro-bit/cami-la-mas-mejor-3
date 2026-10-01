@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WanderAI | Asistente Inteligente de Turismo</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        coral: {
+                            500: '#f97316',
+                            600: '#ea580c'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Marked JS para formatear Markdown de la IA -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Estilos Personalizados -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-40 w-full backdrop-blur-md bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            
+            <!-- Logo -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-teal-400 flex items-center justify-center text-white shadow-lg shadow-brand-500/20">
+                    <i class="fa-solid fa-compass text-xl animate-spin-slow"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+                        WanderAI <span class="text-xs px-2 py-0.5 rounded-full bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300 font-semibold border border-brand-200 dark:border-brand-800">Turismo</span>
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">Tu guía de viajes inteligente con IA</p>
+                </div>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- API Key Config Button -->
+                <button id="btn-open-config" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition flex items-center gap-2 text-sm font-medium" title="Configuración de API Key">
+                    <i class="fa-solid fa-key text-amber-500"></i>
+                    <span class="hidden md:inline">API Key</span>
+                </button>
+
+                <!-- Documentación de Entregables -->
+                <button id="btn-open-doc" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition flex items-center gap-2 text-sm font-medium" title="Ver Documentación del Proyecto">
+                    <i class="fa-solid fa-file-code text-brand-600 dark:text-brand-400"></i>
+                    <span class="hidden md:inline">Documentación</span>
+                </button>
+
+                <!-- Dark Mode Toggle -->
+                <button id="btn-theme-toggle" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition" title="Cambiar Tema">
+                    <i class="fa-solid fa-moon text-lg dark:hidden"></i>
+                    <i class="fa-solid fa-sun text-lg hidden dark:block text-amber-400"></i>
+                </button>
+
+                <!-- Clear History -->
+                <button id="btn-clear-chat" class="p-2.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl transition" title="Limpiar Historial">
+                    <i class="fa-solid fa-trash-can text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Sidebar Controls & Suggestions -->
+        <aside class="lg:col-span-4 space-y-6">
+            
+            <!-- Quick Preset Modes -->
+            <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-5 border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-brand-500"></i> Estilo de Viaje
+                </h2>
+                <div class="grid grid-cols-2 gap-2" id="travel-styles">
+                    <button data-style="mochilero" class="style-btn px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-left text-xs font-semibold hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-person-walking-luggage text-brand-500 text-sm"></i> Mochilero / Low-Cost
+                    </button>
+                    <button data-style="familiar" class="style-btn px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-left text-xs font-semibold hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-people-roof text-teal-500 text-sm"></i> Familiar / Tranquilo
+                    </button>
+                    <button data-style="aventura" class="style-btn px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-left text-xs font-semibold hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-mountain-sun text-amber-500 text-sm"></i> Aventura & Naturaleza
+                    </button>
+                    <button data-style="lujo" class="style-btn px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-left text-xs font-semibold hover:border-brand-500 hover:bg-brand-50/50 dark:hover:bg-slate-700 transition flex items-center gap-2">
+                        <i class="fa-solid fa-gem text-purple-500 text-sm"></i> Lujo & Gourmet
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Questions Prompts -->
+            <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-5 border border-slate-200 dark:border-slate-700/60 shadow-sm">
+                <h2 class="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-lightbulb text-amber-500"></i> Consultas Frecuentes
+                </h2>
+                <div class="space-y-2" id="preset-prompts">
+                    <button data-prompt="Diseña un itinerario completo de 3 días para visitar Río de Janeiro con presupuesto medio." class="prompt-btn w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-brand-50 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition flex items-start gap-2 group">
+                        <i class="fa-solid fa-map-location-dot text-brand-500 mt-0.5 group-hover:scale-110 transition"></i>
+                        <span>Itinerario 3 días en Río de Janeiro</span>
+                    </button>
+                    <button data-prompt="¿Cuáles son los platillos imperdibles de la gastronomía peruana en Lima y dónde probarlos?" class="prompt-btn w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-brand-50 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition flex items-start gap-2 group">
+                        <i class="fa-solid fa-utensils text-coral-500 mt-0.5 group-hover:scale-110 transition"></i>
+                        <span>Guía gastronómica de Lima, Perú</span>
+                    </button>
+                    <button data-prompt="¿Qué documentos, vacunas y requisitos necesito para viajar a España desde Latinoamérica?" class="prompt-btn w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-brand-50 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition flex items-start gap-2 group">
+                        <i class="fa-solid fa-passport text-blue-500 mt-0.5 group-hover:scale-110 transition"></i>
+                        <span>Requisitos de viaje a Europa</span>
+                    </button>
+                    <button data-prompt="Recomiéndame 5 destinos sostenibles y poco concurridos en Sudamérica para viajar este año." class="prompt-btn w-full text-left p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 hover:bg-brand-50 dark:hover:bg-slate-700/80 border border-slate-200/80 dark:border-slate-700 text-xs font-medium text-slate-700 dark:text-slate-300 transition flex items-start gap-2 group">
+                        <i class="fa-solid fa-leaf text-emerald-500 mt-0.5 group-hover:scale-110 transition"></i>
+                        <span>Destinos eco-turísticos ocultos</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Info Box -->
+            <div class="p-4 rounded-2xl bg-gradient-to-br from-brand-500/10 to-teal-500/10 border border-brand-500/20 text-xs text-slate-600 dark:text-slate-400">
+                <div class="flex items-center gap-2 font-semibold text-brand-700 dark:text-brand-300 mb-1">
+                    <i class="fa-solid fa-circle-info"></i> Asistente de Viajes Personal
+                </div>
+                <p>Puedes pedir itinerarios personalizables, presupuestos aproximados, consejos de transporte, mejor época para viajar y más.</p>
+            </div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <section class="lg:col-span-8 flex flex-col h-[calc(100vh-10rem)] min-h-[550px] bg-white dark:bg-slate-800/90 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-xl overflow-hidden">
+            
+            <!-- Chat Status Bar -->
+            <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Modo Activo: <strong id="active-mode-label" class="text-slate-700 dark:text-slate-200">General / Turismo amplio</strong></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-export-chat" class="text-xs text-slate-500 hover:text-brand-600 dark:hover:text-brand-400 font-medium transition flex items-center gap-1">
+                        <i class="fa-solid fa-download"></i> Exportar Chat
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Stream Container -->
+            <div id="chat-messages" class="flex-1 p-4 sm:p-6 overflow-y-auto space-y-6 scroll-smooth">
+                
+                <!-- Welcome Message -->
+                <div class="flex gap-4 max-w-3xl">
+                    <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <div class="space-y-2">
+                        <div class="bg-slate-100 dark:bg-slate-700/60 text-slate-800 dark:text-slate-100 p-4 rounded-2xl rounded-tl-none border border-slate-200/60 dark:border-slate-700 text-sm leading-relaxed shadow-sm">
+                            ¡Hola! 👋 Soy tu **Asistente Virtual de Viajes y Turismo**. 
+                            <br><br>
+                            ¿A dónde te gustaría viajar o qué destino quieres explorar? Puedo armarte un itinerario día por día, buscar la mejor gastronomía local o darte consejos de presupuesto.
+                        </div>
+                        <span class="text-[10px] text-slate-400 block px-1">Asistente IA • Ahora</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Special AI Action Toolbar -->
+            <div id="ai-quick-actions" class="hidden px-4 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 flex flex-wrap gap-2 items-center text-xs">
+                <span class="text-slate-400 text-[11px] font-semibold uppercase">Acciones IA rápido:</span>
+                <button id="btn-summarize" class="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-brand-500 text-slate-700 dark:text-slate-300 transition flex items-center gap-1">
+                    <i class="fa-solid fa-compress text-brand-500"></i> Generar Resumen
+                </button>
+                <div class="relative inline-block">
+                    <select id="select-translate" class="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs focus:outline-none focus:border-brand-500">
+                        <option value="">Traducir respuesta a...</option>
+                        <option value="Inglés">English (Inglés)</option>
+                        <option value="Portugués">Português (Portugués)</option>
+                        <option value="Francés">Français (Francés)</option>
+                        <option value="Italiano">Italiano</option>
+                        <option value="Alemán">Deutsch (Alemán)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Input Form Section -->
+            <form id="chat-form" class="p-4 bg-slate-50/80 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-700/80">
+                <div class="relative flex items-center">
+                    <textarea 
+                        id="user-input" 
+                        rows="1" 
+                        placeholder="Escribe tu consulta turística aquí (ej: 'Quiero viajar 5 días a Bariloche en invierno')..."
+                        class="w-full pl-4 pr-24 py-3.5 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent resize-none text-sm shadow-inner transition placeholder:text-slate-400"
+                        required></textarea>
+                    
+                    <div class="absolute right-2 flex items-center gap-1">
+                        <button 
+                            type="submit" 
+                            id="btn-send" 
+                            class="p-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg transition-colors shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                            <i class="fa-solid fa-paper-plane text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="validation-msg" class="text-xs text-rose-500 mt-1.5 hidden font-medium flex items-center gap-1">
+                    <i class="fa-solid fa-circle-exclamation"></i> Por favor, escribe una pregunta antes de enviar.
+                </div>
+            </form>
+
+        </section>
+    </main>
+
+    <!-- Modal: Configuración de API Key -->
+    <div id="modal-config" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-700 shadow-2xl transform scale-95 transition-transform duration-300">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-amber-500"></i> Configurar API Key
+                </h3>
+                <button class="btn-close-modal text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+                Esta aplicación integra directamente la API de Google Gemini. Si dispones de tu propia clave API de Gemini, puedes ingresarla a continuación. De lo contrario, se usará un motor de respuestas simuladas inteligente.
+            </p>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Gemini API Key</label>
+                    <input type="password" id="api-key-input" placeholder="AIzaSy..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" class="btn-close-modal px-4 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">Cancelar</button>
+                    <button type="button" id="btn-save-key" class="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-md">Guardar Key</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Documentación del Entregable Académico -->
+    <div id="modal-doc" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-3xl w-full max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-700 shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
+            
+            <div class="p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-brand-600 text-white flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 dark:text-white">Documentación del Entregables</h3>
+                        <p class="text-xs text-slate-500">Informe técnico de desarrollo e integración de IA</p>
+                    </div>
+                </div>
+                <button class="btn-close-modal text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-6 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                
+                <div>
+                    <h4 class="font-bold text-slate-900 dark:text-white text-base mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-brand-500"></i> 1. Arquitectura y Tecnologías
+                    </h4>
+                    <ul class="list-disc pl-5 space-y-1 text-xs">
+                        <li><strong>Frontend:</strong> HTML5 Semántico, CSS3 estilizado con Tailwind CSS CDN y Javascript Moderno (ES6+ Vanilla).</li>
+                        <li><strong>Procesamiento IA:</strong> API REST oficial de Google Gemini (`gemini-3-flash-preview`) con fallback a Motor de Simulación contextual offline.</li>
+                        <li><strong>Parsing Markdown:</strong> Biblioteca `marked.js` para renderizar tablas, negritas, listas e itinerarios de forma limpia.</li>
+                        <li><strong>Persistencia:</strong> `localStorage` para almacenamiento local del historial y claves API.</li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-900 dark:text-white text-base mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-brain text-coral-500"></i> 2. Uso de la IA durante el Desarrollo
+                    </h4>
+                    <p class="text-xs mb-2">
+                        Durante la fase de construcción de la aplicación, la Inteligencia Artificial fue empleada para:
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                            <strong class="text-brand-600 dark:text-brand-400 block mb-1">Diseño de Prompts del Sistema:</strong>
+                            Establecimiento del System Prompt que condiciona la respuesta del bot como un guía turístico experto en gastronomía, transporte y presupuestos.
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+                            <strong class="text-brand-600 dark:text-brand-400 block mb-1">Optimización de Funcionalidades:</strong>
+                            Implementación de lógica para resúmenes de itinerarios y traducción instantánea utilizando prompts directos.
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="font-bold text-slate-900 dark:text-white text-base mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-500"></i> 3. Cumplimiento de Requisitos
+                    </h4>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Diseño Responsive</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Formulario Validado</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Integración con IA</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Historial de Sesión</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Modo Oscuro</div>
+                        <div class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Resúmenes e Idiomas</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex justify-end">
+                <button class="btn-close-modal px-5 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-brand-700 transition">
+                    Entendido / Cerrar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Script Principal -->
+    <script src="script.js"></script>
+</body>
+</html>
